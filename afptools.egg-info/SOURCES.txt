@@ -1,0 +1,13 @@
+README.md
+setup.py
+afptools/__init__.py
+afptools/__main__.py
+afptools/cli.py
+afptools/operations.py
+afptools/parser.py
+afptools/utils.py
+afptools.egg-info/PKG-INFO
+afptools.egg-info/SOURCES.txt
+afptools.egg-info/dependency_links.txt
+afptools.egg-info/entry_points.txt
+afptools.egg-info/top_level.txt
