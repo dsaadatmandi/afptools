@@ -1,5 +1,7 @@
 # AFP Tools
 
+Testing Claude assisted development.
+
 A Python package for working with AFP (Advanced Function Presentation) files.
 
 ## Features
