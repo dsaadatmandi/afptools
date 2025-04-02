@@ -9,6 +9,7 @@ from typing import List, Optional
 from afptools.parser import AFPParser
 from afptools.operations import extract_pages
 from afptools.utils import parse_page_range
+from afptools.analyzer import analyze_afp_file, format_analysis_report
 
 
 def main(args: Optional[List[str]] = None) -> int:
@@ -35,6 +36,11 @@ def main(args: Optional[List[str]] = None) -> int:
     extract_parser.add_argument('output', help='Output AFP file path')
     extract_parser.add_argument('pages', help='Page range (e.g., "1:3, 5, 7:")')
     
+    # Analyze command
+    analyze_parser = subparsers.add_parser('analyze', help='Analyze AFP file structure')
+    analyze_parser.add_argument('input', help='Input AFP file path')
+    analyze_parser.add_argument('--verbose', '-v', action='store_true', help='Show verbose output')
+    
     # Parse arguments
     parsed_args = parser.parse_args(args)
     
@@ -46,6 +52,8 @@ def main(args: Optional[List[str]] = None) -> int:
     # Execute appropriate command
     if parsed_args.command == 'extract':
         return execute_extract(parsed_args.input, parsed_args.output, parsed_args.pages)
+    elif parsed_args.command == 'analyze':
+        return execute_analyze(parsed_args.input, parsed_args.verbose)
     
     # Unknown command
     print(f"Unknown command: {parsed_args.command}")
@@ -91,6 +99,33 @@ def execute_extract(input_path: str, output_path: str, page_range: str) -> int:
             return 1
     except Exception as e:
         print(f"Error: {str(e)}")
+        return 1
+
+
+def execute_analyze(input_path: str, verbose: bool = False) -> int:
+    """
+    Execute the analyze command.
+    
+    Args:
+        input_path: Path to the input AFP file
+        verbose: Whether to show verbose output
+        
+    Returns:
+        Exit code (0 for success, non-zero for failure)
+    """
+    try:
+        # Analyze the AFP file
+        analysis = analyze_afp_file(input_path, verbose)
+        
+        # Print the analysis report
+        print(format_analysis_report(analysis))
+        
+        # Return success if we could analyze the file, even if it's not a standard AFP
+        if analysis["errors"]:
+            return 1
+        return 0
+    except Exception as e:
+        print(f"Error analyzing file: {str(e)}")
         return 1
 
 

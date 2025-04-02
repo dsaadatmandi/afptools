@@ -101,39 +101,76 @@ class AFPParser:
         
         Returns:
             List of structured fields
+        
+        Raises:
+            ValueError: If the file cannot be parsed as a valid AFP file
         """
-        with open(self.file_path, 'rb') as f:
-            data = f.read()
-        
-        # Parse all structured fields
-        offset = 0
-        while offset < len(data):
-            # Check if we have at least 2 bytes for the length
-            if offset + 2 > len(data):
-                break
+        try:
+            with open(self.file_path, 'rb') as f:
+                data = f.read()
             
-            # Get the length of the next structured field
-            field_length = struct.unpack('>H', data[offset:offset+2])[0]
+            # Parse all structured fields
+            offset = 0
+            field_count = 0
+            error_count = 0
+            max_errors = 10  # Maximum number of errors before giving up
             
-            # Check if we have enough data for the complete field
-            if offset + field_length > len(data):
-                break
+            while offset < len(data):
+                # Check if we have at least 2 bytes for the length
+                if offset + 2 > len(data):
+                    break
+                
+                try:
+                    # Get the length of the next structured field
+                    field_length = struct.unpack('>H', data[offset:offset+2])[0]
+                    
+                    # Sanity check on field length
+                    if field_length < 5 or field_length > 32767:
+                        error_count += 1
+                        if error_count > max_errors:
+                            raise ValueError(f"Too many invalid field lengths, last at offset {offset}")
+                        # Try to recover by skipping this byte
+                        offset += 1
+                        continue
+                    
+                    # Check if we have enough data for the complete field
+                    if offset + field_length > len(data):
+                        break
+                    
+                    # Parse the structured field
+                    field_data = data[offset:offset+field_length]
+                    field = AFPStructuredField.from_bytes(field_data)
+                    
+                    if field:
+                        self.fields.append(field)
+                        field_count += 1
+                    
+                    # Move to the next field
+                    offset += field_length
+                    
+                except Exception as e:
+                    error_count += 1
+                    if error_count > max_errors:
+                        raise ValueError(f"Too many errors parsing AFP file: {str(e)}")
+                    # Try to recover by skipping this byte
+                    offset += 1
             
-            # Parse the structured field
-            field_data = data[offset:offset+field_length]
-            field = AFPStructuredField.from_bytes(field_data)
+            # Check if we found any valid fields
+            if not self.fields:
+                raise ValueError("No valid AFP structured fields found in the file")
             
-            if field:
-                self.fields.append(field)
+            # Identify resource section and pages
+            self.identify_resources()
+            self.identify_pages()
             
-            # Move to the next field
-            offset += field_length
-        
-        # Identify resource section and pages
-        self.identify_resources()
-        self.identify_pages()
-        
-        return self.fields
+            return self.fields
+            
+        except Exception as e:
+            # If there was an error parsing the file, try to provide a helpful message
+            if "No valid AFP structured fields" in str(e) or "Too many" in str(e):
+                raise ValueError(f"This does not appear to be a valid AFP file: {str(e)}")
+            else:
+                raise ValueError(f"Error parsing AFP file: {str(e)}")
     
     def identify_resources(self) -> int:
         """

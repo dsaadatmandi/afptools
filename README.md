@@ -43,6 +43,27 @@ This extracts:
 - Page 5
 - Page 7 to the end of the document
 
+#### Analyze AFP Files
+
+Analyze the structure of an AFP file:
+
+```bash
+afptools analyze input.afp
+```
+
+For more detailed output:
+
+```bash
+afptools analyze input.afp --verbose
+```
+
+This command provides information about:
+- File size
+- AFP format validation
+- Number of structured fields
+- Number of pages
+- Field types and structure
+
 ### Page Range Syntax
 
 The page range syntax supports:
@@ -55,6 +76,8 @@ The page range syntax supports:
 ## Python API
 
 You can also use AFP Tools as a Python library:
+
+### Page Extraction
 
 ```python
 from afptools.parser import AFPParser
@@ -73,6 +96,24 @@ page_numbers = parse_page_range("1:3, 5, 7:", total_pages)
 
 # Extract pages
 extract_pages(parser, page_numbers, "output.afp")
+```
+
+### AFP File Analysis
+
+```python
+from afptools.analyzer import analyze_afp_file, format_analysis_report
+
+# Analyze an AFP file
+analysis = analyze_afp_file("input.afp", verbose=True)
+
+# Print the analysis report
+print(format_analysis_report(analysis))
+
+# Access specific analysis results
+if analysis["is_afp"]:
+    print(f"File contains {analysis['page_count']} pages")
+else:
+    print("File is not a standard AFP file")
 ```
 
 ## AFP File Structure

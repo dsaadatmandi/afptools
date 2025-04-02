@@ -20,29 +20,45 @@ def extract_pages(parser: AFPParser, page_numbers: List[int], output_path: str) 
         
     Returns:
         True if successful, False otherwise
+        
+    Raises:
+        ValueError: If the file cannot be processed or if no pages were found
     """
+    # Check if the file has any pages
+    if not parser.page_indices:
+        raise ValueError("No pages found in the AFP file. The file may not be a valid AFP file or may not contain any pages.")
+    
+    # Check if any of the requested pages are valid
+    valid_pages = [p for p in page_numbers if p < len(parser.page_indices)]
+    if not valid_pages:
+        raise ValueError(f"None of the requested pages ({page_numbers}) are valid. The file has {len(parser.page_indices)} pages.")
+    
+    # If some pages are invalid, print a warning
+    if len(valid_pages) < len(page_numbers):
+        invalid_pages = [p for p in page_numbers if p >= len(parser.page_indices)]
+        print(f"Warning: Skipping invalid pages: {[p+1 for p in invalid_pages]} (file has {len(parser.page_indices)} pages)")
+    
     # Get all fields from the resource section
     resource_fields = parser.fields[:parser.resource_end_index]
     
     # Get fields for each specified page
     page_fields = []
-    for page_num in page_numbers:
-        if page_num < len(parser.page_indices):
-            start_idx = parser.page_indices[page_num]
-            
-            # Find end index (start of next page or end of file)
-            if page_num + 1 < len(parser.page_indices):
-                end_idx = parser.page_indices[page_num + 1]
-            else:
-                # For the last page, find the next EDT (End Document) or use the end of file
-                end_idx = len(parser.fields)
-                for i in range(start_idx + 1, len(parser.fields)):
-                    if parser.fields[i].type_code == AFPStructuredField.EDT:
-                        end_idx = i
-                        break
-            
-            # Add all fields for this page
-            page_fields.extend(parser.fields[start_idx:end_idx])
+    for page_num in valid_pages:
+        start_idx = parser.page_indices[page_num]
+        
+        # Find end index (start of next page or end of file)
+        if page_num + 1 < len(parser.page_indices):
+            end_idx = parser.page_indices[page_num + 1]
+        else:
+            # For the last page, find the next EDT (End Document) or use the end of file
+            end_idx = len(parser.fields)
+            for i in range(start_idx + 1, len(parser.fields)):
+                if parser.fields[i].type_code == AFPStructuredField.EDT:
+                    end_idx = i
+                    break
+        
+        # Add all fields for this page
+        page_fields.extend(parser.fields[start_idx:end_idx])
     
     # If we have an EDT (End Document) in the original file, make sure we include it
     has_edt = False
@@ -63,7 +79,7 @@ def extract_pages(parser: AFPParser, page_numbers: List[int], output_path: str) 
     
     # Validate the structure
     if not validate_afp_structure(output_fields):
-        raise ValueError("Generated AFP file structure is invalid")
+        print("Warning: Generated AFP file structure may not be valid")
     
     # Write the output file
     return write_afp_file(output_fields, output_path)
